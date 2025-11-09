@@ -1,38 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Recipe, Storyboard } from '../types';
-import { ChefHatIcon, ClockIcon, BarChartIcon, ListIcon, XIcon } from './Icons';
+import type { Recipe, Storyboard, CulinaryPlan } from '../types';
+import { ChefHatIcon, ClockIcon, BarChartIcon, ListIcon, XIcon, SparklesIcon } from './Icons';
 
 interface FullScreenRecipeCardProps {
   recipe: Recipe;
   storyboard?: Storyboard;
   videoUrls: string[];
   onReset: () => void;
+  onOpenAgent?: () => void;
+  culinaryPlan?: CulinaryPlan;
 }
 
-export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({ recipe, storyboard, videoUrls, onReset }) => {
+export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({ recipe, storyboard, videoUrls, onReset, onOpenAgent, culinaryPlan }) => {
   const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-  const [currentClipIndex, setCurrentClipIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const videoElement = videoRef.current;
     if (!videoElement || videoUrls.length === 0) return;
 
-    const videoUrl = videoUrls[currentClipIndex];
+    const videoUrl = videoUrls[0];
     if (videoElement.src !== videoUrl) {
       videoElement.src = videoUrl;
       videoElement.play().catch(e => console.error("Video play failed:", e));
     }
-  }, [currentClipIndex, videoUrls]);
+  }, [videoUrls]);
 
   const handleVideoEnded = () => {
-    // Loop if only one video, otherwise cycle through the clips.
-    const nextIndex = videoUrls.length > 1 ? (currentClipIndex + 1) % videoUrls.length : 0;
-    setCurrentClipIndex(nextIndex);
+    // Loop the single video
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play();
+    }
   };
   
-  const currentScene = storyboard?.scenes[currentClipIndex];
-  const caption = currentScene?.caption;
+  const caption = storyboard?.caption;
 
   if (videoUrls.length === 0) {
     return (
@@ -47,12 +49,11 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({ reci
     <div className="relative h-full w-full bg-black">
       <video
         ref={videoRef}
-        key={currentClipIndex}
         onEnded={handleVideoEnded}
         muted
         autoPlay
         playsInline
-        loop={videoUrls.length === 1} // Only loop if it's a single video
+        loop
         className="w-full h-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -71,13 +72,24 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({ reci
         {caption && <p className="text-center font-bold mb-4 bg-black/50 py-1 px-3 rounded-full inline-block">{caption}</p>}
         <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white drop-shadow-lg">{recipe.title}</h1>
         {storyboard?.hook && <p className="mt-2 text-lg text-indigo-300 font-semibold italic drop-shadow-md">"{storyboard.hook}"</p>}
-        <button 
-          onClick={() => setIsDetailsVisible(true)}
-          className="mt-4 flex items-center justify-center px-4 py-2 font-semibold bg-white/20 backdrop-blur-md rounded-lg hover:bg-white/30 transition-colors"
-        >
-            <ListIcon className="w-5 h-5"/>
-            <span className="ml-2">View Recipe</span>
-        </button>
+        <div className="mt-4 flex gap-2 flex-wrap">
+          <button 
+            onClick={() => setIsDetailsVisible(true)}
+            className="flex items-center justify-center px-4 py-2 font-semibold bg-white/20 backdrop-blur-md rounded-lg hover:bg-white/30 transition-colors"
+          >
+              <ListIcon className="w-5 h-5"/>
+              <span className="ml-2">View Recipe</span>
+          </button>
+          {onOpenAgent && (
+            <button 
+              onClick={onOpenAgent}
+              className="flex items-center justify-center px-4 py-2 font-semibold bg-indigo-600/80 backdrop-blur-md rounded-lg hover:bg-indigo-700/80 transition-colors"
+            >
+                <SparklesIcon className="w-5 h-5"/>
+                <span className="ml-2">AI Assistant</span>
+            </button>
+          )}
+        </div>
       </footer>
 
       {isDetailsVisible && (
