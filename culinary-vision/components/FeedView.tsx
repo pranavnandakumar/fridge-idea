@@ -18,11 +18,6 @@ export const FeedView: React.FC<FeedViewProps> = ({ onClose, onRecipeLike, onOpe
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  // Load feed on mount
-  useEffect(() => {
-    loadFeed();
-  }, []);
-
   const loadFeed = useCallback(() => {
     setIsLoading(true);
     try {
@@ -35,6 +30,24 @@ export const FeedView: React.FC<FeedViewProps> = ({ onClose, onRecipeLike, onOpe
       setIsLoading(false);
     }
   }, []);
+
+  // Load feed on mount
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed]);
+
+  // Listen for feed refresh events (when new recipes are generated)
+  useEffect(() => {
+    const handleFeedRefresh = () => {
+      console.log('Feed refresh event received, reloading feed...');
+      loadFeed();
+    };
+    
+    window.addEventListener('feedRefresh', handleFeedRefresh);
+    return () => {
+      window.removeEventListener('feedRefresh', handleFeedRefresh);
+    };
+  }, [loadFeed]);
 
   // Set up Intersection Observer for feed scrolling
   useEffect(() => {
@@ -179,11 +192,6 @@ export const FeedView: React.FC<FeedViewProps> = ({ onClose, onRecipeLike, onOpe
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 bg-teal-500 p-4 z-20">
         <h1 className="text-white text-2xl font-bold">foogle</h1>
-      </div>
-      
-      {/* Feed counter */}
-      <div className="absolute top-16 right-4 z-20 bg-black/50 text-white px-3 py-2 rounded-full text-sm">
-        {visibleItemIndex + 1} of {feedItems.length}
       </div>
 
       {/* Feed scroller */}
