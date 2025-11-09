@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Recipe, Storyboard, CulinaryPlan } from '../types';
-import { ChefHatIcon, ClockIcon, BarChartIcon, ListIcon, XIcon, SparklesIcon, VolumeIcon, VolumeOffIcon, PlayIcon, PauseIcon, HeartIcon, HeartFilledIcon } from './Icons';
+import { ChefHatIcon, ClockIcon, BarChartIcon, ListIcon, XIcon, SparklesIcon, VolumeIcon, VolumeOffIcon, PlayIcon, PauseIcon, HeartIcon, HeartFilledIcon, ArrowLeftIcon } from './Icons';
 import { favoritesService } from '../services/favoritesService';
 import { authService } from '../services/authService';
 
@@ -57,6 +57,9 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({
   // Get voiceover URL for this recipe
   const voiceoverUrl = culinaryPlan?.recipeVoiceovers?.[recipeIndex];
   const hasVoiceover = !!voiceoverUrl;
+  
+  // Check if we're viewing a single recipe (likely from favorites)
+  const isSingleRecipe = culinaryPlan?.recipes?.length === 1;
   
   // Store previous visibility state to detect changes
   const prevVisibleRef = useRef<boolean>(false);
@@ -378,18 +381,18 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({
     <div className="relative h-full w-full bg-black">
       {hasVideo ? (
         <>
-          <video
-            ref={videoRef}
-            onEnded={handleVideoEnded}
-            muted
-            autoPlay
-            playsInline
-            loop
+      <video
+        ref={videoRef}
+        onEnded={handleVideoEnded}
+        muted
+        autoPlay
+        playsInline
+        loop
             crossOrigin="anonymous"
-            className="w-full h-full object-cover"
+        className="w-full h-full object-cover"
             preload="auto"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         </>
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -397,34 +400,47 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({
         </div>
       )}
       
-      <header className="absolute top-4 right-4 z-10 flex gap-2">
-        {/* Voiceover controls - only show if voiceover exists */}
-        {hasVoiceover && (
-          <div className="flex gap-1 bg-black/50 rounded-full p-1">
-            <button
-              onClick={toggleVoiceover}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors"
-              title={isVoiceoverPlaying ? "Pause voiceover" : "Play voiceover"}
-            >
-              {isVoiceoverPlaying ? (
-                <PauseIcon className="w-4 h-4 text-white" />
-              ) : (
-                <PlayIcon className="w-4 h-4 text-white" />
-              )}
-            </button>
-            <button
-              onClick={toggleVoiceoverMute}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors"
-              title={isVoiceoverMuted ? "Unmute voiceover" : "Mute voiceover"}
-            >
-              {isVoiceoverMuted ? (
-                <VolumeOffIcon className="w-4 h-4 text-white" />
-              ) : (
-                <VolumeIcon className="w-4 h-4 text-white" />
-              )}
-            </button>
-          </div>
+      <header className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between gap-2">
+        {/* Back button - show when viewing a single recipe (favorites) */}
+        {isSingleRecipe && (
+         <button
+            onClick={onReset}
+            className="p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
+            title="Back to favorites"
+          >
+            <ArrowLeftIcon className="w-5 h-5 text-white" />
+          </button>
         )}
+        
+        {/* Voiceover controls - only show if voiceover exists */}
+        <div className="ml-auto flex gap-2">
+          {hasVoiceover && (
+            <div className="flex gap-1 bg-black/50 rounded-full p-1">
+              <button
+                onClick={toggleVoiceover}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title={isVoiceoverPlaying ? "Pause voiceover" : "Play voiceover"}
+              >
+                {isVoiceoverPlaying ? (
+                  <PauseIcon className="w-4 h-4 text-white" />
+                ) : (
+                  <PlayIcon className="w-4 h-4 text-white" />
+                )}
+              </button>
+              <button
+                onClick={toggleVoiceoverMute}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title={isVoiceoverMuted ? "Unmute voiceover" : "Mute voiceover"}
+              >
+                {isVoiceoverMuted ? (
+                  <VolumeOffIcon className="w-4 h-4 text-white" />
+                ) : (
+                  <VolumeIcon className="w-4 h-4 text-white" />
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </header>
       
       {/* Recipe title overlay (bottom left) - with proper spacing from bottom */}
@@ -522,7 +538,7 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({
         
         {/* AI Assistant button */}
         {onOpenAgent && (
-          <button
+          <button 
             onClick={() => onOpenAgent()}
             className="p-3 rounded-full bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm transition-all duration-200"
             title="Open AI Assistant"
@@ -548,7 +564,7 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({
               >
                 Cancel
               </button>
-              <button
+            <button 
                 onClick={() => {
                   setShowLoginPrompt(false);
                   // Trigger login modal from parent
@@ -557,7 +573,7 @@ export const FullScreenRecipeCard: React.FC<FullScreenRecipeCardProps> = ({
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Sign In
-              </button>
+            </button>
             </div>
           </div>
         </div>

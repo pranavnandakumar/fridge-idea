@@ -11,9 +11,9 @@ import { BottomNavigation, type NavigationTab } from './components/BottomNavigat
 import { generateCulinaryPlan, generateAllRecipeVideos } from './services/geminiService';
 import { generateRecipeVoiceover } from './services/elevenLabsService';
 import { authService } from './services/authService';
-import { favoritesService } from './services/favoritesService';
+import { favoritesService, type FavoriteRecipe } from './services/favoritesService';
 import { feedService } from './services/feedService';
-import type { CulinaryPlan, AgentContext, Storyboard } from './types';
+import type { CulinaryPlan, Storyboard } from './types';
 import { ChefHatIcon, ErrorIcon, HeartFilledIcon, UserIcon, LogoutIcon } from './components/Icons';
 
 enum AppState {
@@ -40,6 +40,7 @@ export default function App(): React.ReactElement {
   const [favoriteCount, setFavoriteCount] = useState<number>(0);
   const [favoritesCulinaryPlan, setFavoritesCulinaryPlan] = useState<CulinaryPlan | null>(null);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+  const [viewingFavorite, setViewingFavorite] = useState<CulinaryPlan | null>(null);
   const tipIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check authentication and load user on mount
@@ -227,6 +228,9 @@ export default function App(): React.ReactElement {
           
           // Refresh feed to include new recipes
           feedService.refreshFeed(10);
+          
+          // Dispatch event to notify FeedView to refresh
+          window.dispatchEvent(new CustomEvent('feedRefresh'));
         }, 0);
         
         return;
@@ -312,6 +316,9 @@ export default function App(): React.ReactElement {
           
           // Refresh feed to include new recipes
           feedService.refreshFeed(10);
+          
+          // Dispatch event to notify FeedView to refresh
+          window.dispatchEvent(new CustomEvent('feedRefresh'));
         }, 0);
         
         if (quotaExceeded) {
@@ -388,6 +395,9 @@ export default function App(): React.ReactElement {
           
           // Refresh feed to include new recipes
           feedService.refreshFeed(10);
+          
+          // Dispatch event to notify FeedView to refresh
+          window.dispatchEvent(new CustomEvent('feedRefresh'));
         }, 0);
       } finally {
         // Always transition to displaying recipes, even if video generation failed
@@ -429,6 +439,30 @@ export default function App(): React.ReactElement {
     setActiveTab('favorites');
   }, [user]);
 
+  // Handle viewing a favorite in full-screen
+  const handleViewFavorite = useCallback((favorite: FavoriteRecipe) => {
+    const culinaryPlan: CulinaryPlan = {
+      ingredients: favorite.ingredients,
+      recipes: [favorite.recipe],
+      storyboard: favorite.storyboard || {
+        hook: '',
+        voiceover_script: '',
+        video_description: '',
+        caption: favorite.recipe.title
+      },
+      videoUrls: favorite.videoUrls || [],
+      recipeVideos: { 0: favorite.videoUrls || [] },
+      recipeStoryboards: favorite.storyboard ? { 0: favorite.storyboard } : undefined,
+      recipeVoiceovers: favorite.voiceoverUrl ? { 0: favorite.voiceoverUrl } : undefined
+    };
+    setViewingFavorite(culinaryPlan);
+  }, []);
+
+  // Handle going back from favorite view to favorites list
+  const handleBackFromFavorite = useCallback(() => {
+    setViewingFavorite(null);
+  }, []);
+
   const renderContent = () => {
     // Handle tab-based navigation
     if (activeTab === 'feed') {
@@ -462,6 +496,37 @@ export default function App(): React.ReactElement {
     }
 
     if (activeTab === 'favorites') {
+      // If viewing a favorite in full-screen, show the recipe scroller
+      if (viewingFavorite) {
+        return (
+          <div className="h-screen w-screen bg-black">
+            <RecipeScroller
+              plan={viewingFavorite}
+              onReset={handleBackFromFavorite}
+              onOpenAgent={(plan) => {
+                setFavoritesCulinaryPlan(plan);
+                setIsAgentOpen(true);
+              }}
+              onFavoriteChange={handleFavoriteChange}
+            />
+            {isAgentOpen && favoritesCulinaryPlan && (
+              <CookingAgent
+                context={{
+                  recipes: favoritesCulinaryPlan.recipes,
+                  ingredients: favoritesCulinaryPlan.ingredients || [],
+                  culinaryPlan: favoritesCulinaryPlan
+                }}
+                onClose={() => {
+                  setIsAgentOpen(false);
+                  setFavoritesCulinaryPlan(null);
+                }}
+              />
+            )}
+          </div>
+        );
+      }
+
+      // Otherwise show the favorites list
       return (
         <div className="h-screen w-screen bg-white pb-16">
           <FavoritesView
@@ -471,6 +536,7 @@ export default function App(): React.ReactElement {
               setIsAgentOpen(true);
             }}
             onFavoriteChange={handleFavoriteChange}
+            onViewFavorite={handleViewFavorite}
           />
           {isAgentOpen && favoritesCulinaryPlan && (
             <CookingAgent
